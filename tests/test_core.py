@@ -104,6 +104,63 @@ def test_measure_props(funcname, shape, chunks, has_lbls, ind):
 
     assert a_r.dtype == d_r.dtype
     assert a_r.shape == d_r.shape
+    assert np.allclose(a_r, np.array(d_r), equal_nan=True)
+
+
+@pytest.mark.parametrize(
+    "funcname", [
+        "center_of_mass",
+        "maximum",
+        "maximum_position",
+        "mean",
+        "minimum",
+        "minimum_position",
+        "standard_deviation",
+        "sum",
+        "variance",
+    ]
+)
+@pytest.mark.parametrize(
+    "shape, chunks", [
+        ((15, 16), (4, 5)),
+        ((9, 10, 8), (4, 5, 4)),
+    ]
+)
+@pytest.mark.parametrize(
+    "ind", [
+        [1, 2],
+        [3, 4],
+        [1, 2, 3, 4],
+    ]
+)
+def test_measure_nan_props(funcname, shape, chunks, ind):
+    sp_func = getattr(spnd, funcname)
+    da_func = getattr(dask_ndmeasure, funcname)
+
+    a = np.random.random(shape)
+
+    lbls = None
+    d_lbls = None
+
+    lbls = np.zeros(a.shape, dtype=np.int64)
+    lbls += (
+        (a < 0.5).astype(lbls.dtype) +
+        (a < 0.25).astype(lbls.dtype) +
+        (a < 0.125).astype(lbls.dtype) +
+        (a < 0.0625).astype(lbls.dtype)
+    )
+
+    a[tuple(np.argwhere(lbls == 1)[0][:, None])] = np.nan
+    a[(lbls == 2).nonzero()] = np.nan
+
+    d = da.from_array(a, chunks=chunks)
+    d_lbls = da.from_array(lbls, chunks=d.chunks)
+
+    a_r = np.array(sp_func(a, lbls, ind))
+    d_r = da_func(d, d_lbls, ind)
+
+    assert a_r.dtype == d_r.dtype
+    assert a_r.shape == d_r.shape
     assert np.allclose(np.array(a_r), np.array(d_r), equal_nan=True)
 
 
