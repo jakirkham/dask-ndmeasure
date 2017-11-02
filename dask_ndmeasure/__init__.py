@@ -207,10 +207,11 @@ def label(input, structure=None):
 
     input = _compat._asarray(input)
 
-    if not all([len(c) == 1 for c in input.chunks]):
-        raise ValueError("``input`` must have 1 chunk in all dimensions.")
+    dask.array.map_overlap(scipy.ndimage.label, 1, )
 
     result = dask.delayed(scipy.ndimage.label)(input, structure)
+
+
 
     label = dask.array.from_delayed(
         result[0],
